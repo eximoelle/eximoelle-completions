@@ -1,0 +1,356 @@
+#compdef yt-dlp
+
+# Completion for yt-dlp.
+local curcontext="$curcontext" state context line ret=1
+local -a expl state_descr
+typeset -A opt_args
+
+local -a browsers color_policies fixup_policies concat_policies sponsorblock_categories
+browsers=(firefox chrome chromium brave edge safari opera vivaldi whale)
+color_policies=(always auto auto-tty never no_color no_color-tty)
+fixup_policies=(never warn detect_or_warn force)
+concat_policies=(never always multi_video)
+sponsorblock_categories=(sponsor intro outro selfpromo preview filler interaction music_offtopic hook poi_highlight chapter all default)
+
+local -a general_opts=(
+  '(-h --help)'{-h,--help}'[show help]'
+  '(-V --version)'{-V,--version}'[print version]'
+  '(-U --update)'{-U,--update}'[update yt-dlp]'
+  '--no-update[do not check for updates]'
+  '--update-to=[upgrade or downgrade to channel@tag]:channel@tag:'
+  '(-i --ignore-errors)'{-i,--ignore-errors}'[ignore download and postprocessing errors]'
+  '--no-abort-on-error[continue with next video on errors]'
+  '--abort-on-error[abort on errors]'
+  '--list-extractors[list all supported extractors]'
+  '--extractor-descriptions[list extractors with descriptions]'
+  '(--use-extractors --ies)'{--use-extractors,--ies}'[extractor names to use]:extractors:'
+  '--default-search=[prefix for unqualified URLs]:prefix:'
+  '(--ignore-config --no-config)'{--ignore-config,--no-config}'[do not read config files]'
+  '--no-config-locations[do not load custom config files]'
+  '--config-locations=[main configuration location]:path:_files -/'
+  '--plugin-dirs=[additional plugin directory]:directory:_files -/'
+  '--no-plugin-dirs[clear plugin search directories]'
+  '--js-runtimes=[additional JavaScript runtime]:runtime:'
+  '--no-js-runtimes[clear enabled JavaScript runtimes]'
+  '--remote-components=[allow fetching remote components]:component:'
+  '--no-remote-components[disallow fetching remote components]'
+  '--flat-playlist[do not extract playlist entries]'
+  '--no-flat-playlist[fully extract playlists]'
+  '--live-from-start[download livestreams from the start]'
+  '--no-live-from-start[download livestreams from current time]'
+  '--wait-for-video=[wait for scheduled streams]:seconds:'
+  '--no-wait-for-video[do not wait for scheduled streams]'
+  '--mark-watched[mark videos watched]'
+  '--no-mark-watched[do not mark videos watched]'
+  '--color=[color output policy]:policy:->color'
+  '--compat-options=[compatibility options]:options:'
+  '--alias[create aliases for an option string]:aliases:'
+  '(-t --preset-alias)'{-t,--preset-alias}'[apply preset alias]:preset:'
+)
+
+local -a network_opts=(
+  '--proxy[use HTTP/SOCKS proxy]:proxy url:'
+  '--socket-timeout=[HTTP timeout]:seconds:'
+  '--source-address=[client-side IP address]:ip:'
+  '--impersonate=[client to impersonate]:client:'
+  '--list-impersonate-targets[list available impersonation targets]'
+  '(-4 --force-ipv4)'{-4,--force-ipv4}'[make all connections via IPv4]'
+  '(-6 --force-ipv6)'{-6,--force-ipv6}'[make all connections via IPv6]'
+  '--enable-file-urls[enable file:// URLs]'
+)
+
+local -a geo_opts=(
+  '--geo-verification-proxy=[proxy for geo verification]:proxy:'
+  '--xff=[fake X-Forwarded-For header]:value:'
+)
+
+local -a selection_opts=(
+  '(-I --playlist-items)'{-I,--playlist-items}'[select playlist items]:itemspec:'
+  '--min-filesize=[abort if smaller than SIZE]:size:'
+  '--max-filesize=[abort if larger than SIZE]:size:'
+  '--date=[download only videos uploaded on date]:date:'
+  '--datebefore=[download videos on or before date]:date:'
+  '--dateafter=[download videos on or after date]:date:'
+  '--match-filters=[generic video filter]:filter:'
+  '--no-match-filters[do not use match filters]'
+  '--break-match-filters=[stop when filter matches]:filter:'
+  '--no-break-match-filters[do not use break match filters]'
+  '--no-playlist[download only the video when playlist detected]'
+  '--yes-playlist[download playlist when playlist detected]'
+  '--age-limit=[download only suitable for given age]:years:'
+  '--download-archive=[record downloaded IDs to file]:archive file:_files'
+  '--no-download-archive[do not use archive file]'
+  '--max-downloads=[abort after downloading N files]:number:'
+  '--break-on-existing[stop when encountering archived file]'
+  '--no-break-on-existing[do not stop on existing entries]'
+  '--break-per-input[reset break limits per input URL]'
+  '--no-break-per-input[apply break limits to entire queue]'
+  '--skip-playlist-after-errors=[skip rest of playlist after N errors]:count:'
+)
+
+local -a download_opts=(
+  '(-N --concurrent-fragments)'{-N,--concurrent-fragments}'[number of concurrent fragments]:count:'
+  '(-r --limit-rate)'{-r,--limit-rate}'[maximum download rate]:rate:'
+  '--throttled-rate=[assume throttling below rate]:rate:'
+  '(-R --retries)'{-R,--retries}'[number of retries]:retries:'
+  '--file-access-retries=[file access retries]:retries:'
+  '--fragment-retries=[fragment retries]:retries:'
+  '--retry-sleep=[sleep between retries]:expr:'
+  '--skip-unavailable-fragments[skip unavailable fragments]'
+  '--abort-on-unavailable-fragments[abort on unavailable fragments]'
+  '--keep-fragments[keep downloaded fragments]'
+  '--no-keep-fragments[delete fragments after downloading]'
+  '--buffer-size=[download buffer size]:size:'
+  '--resize-buffer[auto adjust buffer size]'
+  '--no-resize-buffer[do not auto adjust buffer size]'
+  '--http-chunk-size=[chunk size for HTTP downloads]:size:'
+  '--playlist-random[download playlist in random order]'
+  '--lazy-playlist[process playlist entries lazily]'
+  '--no-lazy-playlist[process playlist after parsing]'
+  '--hls-use-mpegts[use mpegts container for HLS]'
+  '--no-hls-use-mpegts[do not use mpegts for HLS]'
+  '--download-sections=[download only matching sections]:regex:'
+  '--downloader=[external downloader to use]:downloader:'
+  '--downloader-args=[arguments for external downloader]:args:'
+)
+
+local -a filesystem_opts=(
+  '(-a --batch-file)'{-a,--batch-file}'[file containing URLs to download]:file:_files'
+  '--no-batch-file[do not read URLs from batch file]'
+  '(-P --paths)'{-P,--paths}'[root path for downloads]:directory:_files -/'
+  '(-o --output)'{-o,--output}'[output template]:template:_files'
+  '--output-na-placeholder=[placeholder for unavailable fields]:text:'
+  '--restrict-filenames[restrict filenames to ASCII]'
+  '--no-restrict-filenames[allow Unicode and special characters]'
+  '--windows-filenames[force Windows-compatible filenames]'
+  '--no-windows-filenames[sanitize filenames minimally]'
+  '--trim-filenames=[limit filename length]:length:'
+  '(-w --no-overwrites)'{-w,--no-overwrites}'[do not overwrite files]'
+  '--force-overwrites[overwrite all files]'
+  '--no-force-overwrites[overwrite related files only]'
+  '(-c --continue)'{-c,--continue}'[resume partially downloaded files]'
+  '--no-continue[do not resume partial downloads]'
+  '--part[use .part files]'
+  '--no-part[write directly into output file]'
+  '--mtime[set mtime from Last-modified header]'
+  '--no-mtime[do not set mtime from Last-modified header]'
+  '--write-description[write video description]'
+  '--no-write-description[do not write description]'
+  '--write-info-json[write video metadata to .info.json]'
+  '--no-write-info-json[do not write video metadata]'
+  '--write-playlist-metafiles[write playlist metadata]'
+  '--no-write-playlist-metafiles[do not write playlist metadata]'
+  '--clean-info-json[remove internal metadata from infojson]'
+  '--no-clean-info-json[write all metadata fields to infojson]'
+  '--write-comments[retrieve video comments]'
+  '--no-write-comments[do not retrieve video comments]'
+  '--load-info-json=[load video info from json]:file:_files'
+  '--cookies[read cookies from file]:cookies file:_files'
+  '--no-cookies[do not read or dump cookies]'
+  '--cookies-from-browser[load cookies from browser]:browser:->browsers'
+  '--no-cookies-from-browser[do not load cookies from browser]'
+  '--cache-dir=[cache directory]:directory:_files -/'
+  '--no-cache-dir[disable filesystem caching]'
+  '--rm-cache-dir[delete all cache files]'
+)
+
+local -a thumbnail_opts=(
+  '--write-thumbnail[write thumbnail image to disk]'
+  '--no-write-thumbnail[do not write thumbnail]'
+  '--write-all-thumbnails[write all thumbnail formats]'
+  '--list-thumbnails[list available thumbnails]'
+)
+
+local -a shortcut_opts=(
+  '--write-link[write internet shortcut]'
+  '--write-url-link[write .url Windows internet shortcut]'
+  '--write-webloc-link[write .webloc macOS internet shortcut]'
+  '--write-desktop-link[write .desktop Linux internet shortcut]'
+)
+
+local -a verbosity_opts=(
+  '(-q --quiet)'{-q,--quiet}'[activate quiet mode]'
+  '--no-quiet[disable quiet mode]'
+  '--no-warnings[ignore warnings]'
+  '(-s --simulate)'{-s,--simulate}'[simulate only]'
+  '--no-simulate[do not simulate]'
+  '--ignore-no-formats-error[ignore "no formats" error]'
+  '--no-ignore-no-formats-error[fail when no formats found]'
+  '(--skip-download --no-download)'{--skip-download,--no-download}'[do not download video]'
+  '(-O --print)'{-O,--print}'[print fields or template]:template:'
+  '--print-to-file=[append template to file]:template: :file:_files'
+  '(-j --dump-json)'{-j,--dump-json}'[print JSON for each video]'
+  '(-J --dump-single-json)'{-J,--dump-single-json}'[print JSON for each URL or infojson]'
+  '--force-write-archive[write archive entries even in simulate]'
+  '--newline[output progress bar as new lines]'
+  '--no-progress[do not print progress bar]'
+  '--progress[show progress bar]'
+  '--console-title[display progress in console titlebar]'
+  '--progress-template=[template for progress output]:template:'
+  '--progress-delta=[time between progress output]:seconds:'
+  '(-v --verbose)'{-v,--verbose}'[verbose logging]'
+  '--dump-pages[print downloaded pages]'
+  '--write-pages[write downloaded pages to files]'
+  '--print-traffic[display HTTP traffic]'
+)
+
+local -a workaround_opts=(
+  '--encoding=[force specified encoding]:encoding:'
+  '--legacy-server-connect[allow insecure HTTPS renegotiation]'
+  '--no-check-certificates[suppress HTTPS certificate validation]'
+  '--prefer-insecure[prefer unencrypted connection]'
+  '--add-headers=[add custom HTTP headers]:header:'
+  '--bidi-workaround[work around terminals without bidi support]'
+  '--sleep-requests=[sleep between requests during extraction]:seconds:'
+  '(--sleep-interval --min-sleep-interval)'{--sleep-interval,--min-sleep-interval}'[minimum sleep before each download]:seconds:'
+  '--max-sleep-interval=[maximum sleep between downloads]:seconds:'
+  '--sleep-subtitles=[sleep before subtitle downloads]:seconds:'
+)
+
+local -a format_opts=(
+  '(-f --format)'{-f,--format}'[select format]:format string:'
+  '(-S --format-sort)'{-S,--format-sort}'[sort formats]:sort order:'
+  '--format-sort-reset[reset format sort order]'
+  '--format-sort-force[force user specified format sort order]'
+  '--no-format-sort-force[allow default sort precedence]'
+  '--video-multistreams[allow multiple video streams to be merged]'
+  '--no-video-multistreams[only one video stream downloaded]'
+  '--audio-multistreams[allow multiple audio streams to be merged]'
+  '--no-audio-multistreams[only one audio stream downloaded]'
+  '--prefer-free-formats[prefer free containers]'
+  '--no-prefer-free-formats[do not prefer free containers]'
+  '--check-formats[check that formats are downloadable]'
+  '--check-all-formats[check all formats for availability]'
+  '--no-check-formats[do not check format availability]'
+  '(-F --list-formats)'{-F,--list-formats}'[list available formats]'
+  '--merge-output-format=[container to use when merging]:format:'
+)
+
+local -a subtitle_opts=(
+  '--write-subs[write subtitle file]'
+  '--no-write-subs[do not write subtitle file]'
+  '--write-auto-subs[write automatically generated subtitles]'
+  '--no-write-auto-subs[do not write auto-generated subtitles]'
+  '--list-subs[list available subtitles]'
+  '--sub-format=[subtitle format]:format:'
+  '--sub-langs=[subtitle languages to download]:languages:'
+)
+
+local -a auth_opts=(
+  '(-u --username)'{-u,--username}'[login username]:username:'
+  '(-p --password)'{-p,--password}'[account password]:password:'
+  '(-2 --twofactor)'{-2,--twofactor}'[two-factor authentication code]:code:'
+  '(-n --netrc)'{-n,--netrc}'[use .netrc authentication data]'
+  '--netrc-location=[location of .netrc]:path:_files'
+  '--netrc-cmd=[command to get credentials]:command:'
+  '--video-password=[video specific password]:password:'
+  '--ap-mso=[Adobe Pass MSO]:mso:'
+  '--ap-username=[Adobe Pass username]:username:'
+  '--ap-password=[Adobe Pass password]:password:'
+  '--ap-list-mso[list supported Adobe Pass MSOs]'
+  '--client-certificate=[client certificate file]:cert file:_files'
+  '--client-certificate-key=[client certificate key file]:key file:_files'
+  '--client-certificate-password=[password for client certificate key]:password:'
+)
+
+local -a postproc_opts=(
+  '(-x --extract-audio)'{-x,--extract-audio}'[convert video to audio only]'
+  '--audio-format=[audio format to convert to]:format:'
+  '--audio-quality=[ffmpeg audio quality]:quality:'
+  '--remux-video=[remux video into another container]:format:'
+  '--recode-video=[re-encode video into another format]:format:'
+  '--postprocessor-args=[arguments for postprocessors]:args:'
+  '(-k --keep-video)'{-k,--keep-video}'[keep intermediate video file]'
+  '--no-keep-video[delete intermediate video file]'
+  '--post-overwrites[overwrite post-processed files]'
+  '--no-post-overwrites[do not overwrite post-processed files]'
+  '--embed-subs[embed subtitles in video]'
+  '--no-embed-subs[do not embed subtitles]'
+  '--embed-thumbnail[embed thumbnail in file]'
+  '--no-embed-thumbnail[do not embed thumbnail]'
+  '--embed-metadata[embed metadata in file]'
+  '--no-embed-metadata[do not embed metadata]'
+  '--embed-chapters[embed chapter markers]'
+  '--no-embed-chapters[do not embed chapters]'
+  '--embed-info-json[embed infojson as attachment]'
+  '--no-embed-info-json[do not embed infojson]'
+  '--parse-metadata=[parse metadata from fields]:spec:'
+  '--replace-in-metadata=[replace text in metadata]:spec:'
+  '--xattrs[write metadata to xattrs]'
+  '--concat-playlist=[concatenate playlist videos]:policy:->concat'
+  '--fixup=[correct known faults in file]:policy:->fixup'
+  '--ffmpeg-location=[ffmpeg binary or directory]:path:_files -/'
+  '--exec=[execute command on completion]:command:'
+  '--no-exec[remove previously defined exec]'
+  '--convert-subs=[convert subtitles to format]:format:'
+  '--convert-thumbnails=[convert thumbnails to format]:format:'
+  '--split-chapters[split video based on chapters]'
+  '--no-split-chapters[do not split video by chapters]'
+  '--remove-chapters=[remove matching chapters]:regex:'
+  '--no-remove-chapters[do not remove chapters]'
+  '--force-keyframes-at-cuts[force keyframes at cuts]'
+  '--no-force-keyframes-at-cuts[do not force keyframes at cuts]'
+  '--use-postprocessor=[enable plugin postprocessor]:name:'
+)
+
+local -a sponsorblock_opts=(
+  '--sponsorblock-mark=[categories to mark as chapters]:categories:->sponsorblock'
+  '--sponsorblock-remove=[categories to remove]:categories:->sponsorblock'
+  '--sponsorblock-chapter-title=[template for SponsorBlock chapters]:template:'
+  '--no-sponsorblock[disable SponsorBlock]'
+  '--sponsorblock-api=[SponsorBlock API URL]:url:'
+)
+
+local -a extractor_opts=(
+  '--extractor-retries=[retries for extractor errors]:retries:'
+  '--allow-dynamic-mpd[process dynamic DASH manifests]'
+  '--ignore-dynamic-mpd[do not process dynamic DASH manifests]'
+  '--hls-split-discontinuity[split HLS at discontinuities]'
+  '--no-hls-split-discontinuity[do not split HLS at discontinuities]'
+  '--extractor-args=[arguments for extractor]:args:'
+)
+
+local -a arguments=(
+  '*:URL or file:_urls'
+)
+
+local -a sections=(
+  'general:General options:general_opts'
+  'network:Network options:network_opts'
+  'geo:Geo-restriction:geo_opts'
+  'selection:Video selection:selection_opts'
+  'download:Download options:download_opts'
+  'filesystem:Filesystem options:filesystem_opts'
+  'thumbnail:Thumbnail options:thumbnail_opts'
+  'shortcut:Internet shortcut options:shortcut_opts'
+  'verbosity:Verbosity and simulation:verbosity_opts'
+  'workarounds:Workarounds:workaround_opts'
+  'format:Video format options:format_opts'
+  'subtitles:Subtitle options:subtitle_opts'
+  'auth:Authentication options:auth_opts'
+  'postproc:Post-processing options:postproc_opts'
+  'sponsorblock:SponsorBlock options:sponsorblock_opts'
+  'extractor:Extractor options:extractor_opts'
+  'arguments:Arguments:arguments'
+)
+
+local -a all_specs
+for section in $sections; do
+  local arrname="${section##*:}"
+  all_specs+=(${(P)arrname})
+done
+
+_arguments -s -S -C "${all_specs[@]}"
+case $? in
+  0|300) ret=0 ;;
+esac
+
+case $state in
+  browsers) _values 'browser' $browsers && ret=0 ;;
+  color) _values 'color policy' $color_policies && ret=0 ;;
+  concat) _values 'concat policy' $concat_policies && ret=0 ;;
+  fixup) _values 'fixup policy' $fixup_policies && ret=0 ;;
+  sponsorblock) _values 'sponsorblock category' $sponsorblock_categories && ret=0 ;;
+esac
+
+return ret
