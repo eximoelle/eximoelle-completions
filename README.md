@@ -12,21 +12,21 @@
 ### znap
 
 ```zsh
-znap source /path/to/zsh-completions
+znap source /path/to/eximoelle-completions
 ```
 
 ### Oh My Zsh
 
 ```zsh
-ln -s /path/to/zsh-completions $ZSH_CUSTOM/plugins/zsh-completions
+ln -s /path/to/eximoelle-completions $ZSH_CUSTOM/plugins/eximoelle-completions
 # ~/.zshrc
-plugins+=(zsh-completions)
+plugins+=(eximoelle-completions)
 ```
 
 ### Antidote
 
 ```zsh
-antidote bundle /path/to/zsh-completions
+antidote bundle /path/to/eximoelle-completions
 ```
 
 ### Перезагрузка
