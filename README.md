@@ -9,6 +9,19 @@
 
 ## Подключение
 
+### [eximoelle/zsh-config](https://github.com/eximoelle/zsh-config)
+
+Добавить в массив `plugins` в `./rc.d/06-plugins.zsh`
+
+```zsh
+local -a plugins=(
+   <остальные плагины>
+   eximoelle/eximoelle-completions
+)
+```
+
+После запуска новой сессии шелла плагин скачается и подключится на лету.
+
 ### znap
 
 ```zsh
